@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}New Uploads - Social Video Scheduler{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Create scheduled video uploads</h2>
+      <p class="muted">Timezone: {{ app_timezone }}. Add one row per video. Each selected platform creates one upload job.</p>
+    </div>
+    <button class="secondary" type="button" onclick="addRow()">+ Add video row</button>
+  </div>
+
+  <form method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
+    <details class="bulk-panel">
+      <summary>Bulk defaults</summary>
+      <div class="grid">
+        <label>Default title prefix
+          <input type="text" id="bulkTitle" placeholder="Optional prefix">
+        </label>
+        <label>Default description
+          <textarea id="bulkDescription" rows="3" placeholder="Description to apply to empty rows"></textarea>
+        </label>
+        <label>Default tags
+          <input type="text" id="bulkTags" placeholder="tag1, tag2, #shorts">
+        </label>
+        <label>Default scheduled time
+          <input type="datetime-local" id="bulkScheduled">
+        </label>
+        <label>Default channel name label
+          <input type="text" id="bulkChannel" placeholder="Optional">
+        </label>
+        <label>Default YouTube playlist ID
+          <input type="text" id="bulkPlaylist" placeholder="Optional">
+        </label>
+      </div>
+      <button type="button" class="secondary" onclick="applyDefaults()">Apply defaults to empty fields</button>
+    </details>
+
+    <div id="rows" class="rows"></div>
+
+    <div class="actions">
+      <button type="button" class="secondary" onclick="addRow()">+ Add another video</button>
+      <button type="submit">Create scheduled jobs</button>
+    </div>
+  </form>
+</section>
+
+<template id="rowTemplate">
+  <section class="video-row">
+    <input type="hidden" name="row_ids" value="__ROW_ID__">
+
+    <div class="row-title">
+      <h3>Video __ROW_NUM__</h3>
+      <button type="button" class="danger" onclick="removeRow(this)">Remove</button>
+    </div>
+
+    <div class="grid">
+      <label>Video file
+        <input type="file" name="video_file___ROW_ID__" accept="video/mp4,video/quicktime,video/webm,.m4v" required>
+      </label>
+
+      <label>Thumbnail image optional
+        <input type="file" name="thumbnail_file___ROW_ID__" accept="image/jpeg,image/png,image/webp">
+      </label>
+
+      <label>Title
+        <input type="text" name="title___ROW_ID__" placeholder="Leave blank to use file name">
+      </label>
+
+      <label>Scheduled publish date/time
+        <input type="datetime-local" name="scheduled_at___ROW_ID__">
+      </label>
+
+      <label>Channel name optional label
+        <input type="text" name="channel_name___ROW_ID__" placeholder="For your reference">
+      </label>
+
+      <label>Playlist optional
+        <input type="text" name="playlist___ROW_ID__" placeholder="YouTube playlist ID">
+      </label>
+    </div>
+
+    <label>Description
+      <textarea name="description___ROW_ID__" rows="4" placeholder="Video description"></textarea>
+    </label>
+
+    <label>Tags
+      <input type="text" name="tags___ROW_ID__" placeholder="tag1, tag2, #shorts">
+    </label>
+
+    <fieldset class="platforms">
+      <legend>Platforms</legend>
+      <label><input type="checkbox" name="platforms___ROW_ID__" value="youtube"> YouTube</label>
+      <label><input type="checkbox" name="platforms___ROW_ID__" value="facebook"> Facebook Page</label>
+      <label><input type="checkbox" name="platforms___ROW_ID__" value="tiktok"> TikTok</label>
+      <label><input type="checkbox" name="platforms___ROW_ID__" value="pinterest"> Pinterest</label>
+    </fieldset>
+  </section>
+</template>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+  addRow();
+</script>
+{% endblock %}

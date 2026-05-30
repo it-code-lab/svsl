@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Jobs - Social Video Scheduler{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Upload jobs</h2>
+      <p class="muted">Newest 200 jobs. Native-schedule platforms are uploaded early; app-scheduled platforms upload when due. Scheduled times are shown in {{ app_timezone }}.</p>
+    </div>
+    <form method="post" action="{{ url_for('run_due') }}?key={{ config.ADMIN_RUN_KEY }}">
+      <button type="submit">Run ready jobs now</button>
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Platform</th>
+          <th>Title</th>
+          <th>Scheduled</th>
+          <th>Status</th>
+          <th>Attempts</th>
+          <th>External ID</th>
+          <th>Error</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td>#{{ job.id }}</td>
+          <td>{{ job.platform }}</td>
+          <td>{{ job.title }}</td>
+          <td>{{ job.scheduled_at_utc|localtime }}</td>
+          <td><span class="status {{ job.status }}">{{ job.status }}</span></td>
+          <td>{{ job.attempts }}</td>
+          <td>{{ job.external_id or "" }}</td>
+          <td class="error-cell">{{ job.error_message or "" }}</td>
+          <td>
+            {% if job.status in ["failed", "retry"] %}
+            <form method="post" action="{{ url_for('retry_job', job_id=job.id) }}">
+              <button class="secondary" type="submit">Retry</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="muted">No jobs yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
