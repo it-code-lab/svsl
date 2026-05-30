@@ -2,6 +2,63 @@
 {% block title %}New Uploads - Social Video Scheduler{% endblock %}
 
 {% block content %}
+<section class="integration-grid">
+  <section class="card integration-card">
+    <div class="card-header">
+      <div>
+        <h2>Pinterest connection</h2>
+        {% if pinterest_status.connected %}
+          <p class="muted">
+            Connected. Scope: {{ pinterest_status.scope or "unknown" }}.
+            Access token expires: {{ pinterest_status.expires_at_utc or "unknown" }}.
+          </p>
+          <p class="muted">Cached boards available: {{ pinterest_boards|length }}</p>
+          {% if pinterest_boards_error %}<p class="inline-error">{{ pinterest_boards_error }}</p>{% endif %}
+        {% else %}
+          <p class="muted">Not connected. Connect once using OAuth; the backend will refresh the token automatically.</p>
+        {% endif %}
+      </div>
+      <div class="connection-actions">
+        <a class="button-link" href="{{ url_for('pinterest_connect') }}">Connect Pinterest</a>
+        {% if pinterest_status.connected %}
+        <form method="post" action="{{ url_for('pinterest_refresh') }}">
+          <button class="secondary" type="submit">Refresh token</button>
+        </form>
+        <form method="post" action="{{ url_for('pinterest_boards_refresh') }}">
+          <button class="secondary" type="submit">Refresh boards</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card integration-card">
+    <div class="card-header">
+      <div>
+        <h2>Facebook connection</h2>
+        {% if facebook_status.connected %}
+          <p class="muted">
+            Connected. Scope: {{ facebook_status.scope or "unknown" }}.
+            Token expires: {{ facebook_status.expires_at_utc or "unknown" }}.
+          </p>
+          <p class="muted">Cached Pages available: {{ facebook_pages|length }}</p>
+          {% if facebook_pages_error %}<p class="inline-error">{{ facebook_pages_error }}</p>{% endif %}
+        {% else %}
+          <p class="muted">Not connected. Connect with Facebook to cache the Pages you can post to.</p>
+        {% endif %}
+      </div>
+      <div class="connection-actions">
+        <a class="button-link" href="{{ url_for('facebook_connect') }}">Connect Facebook</a>
+        {% if facebook_status.connected %}
+        <form method="post" action="{{ url_for('facebook_pages_refresh') }}">
+          <button class="secondary" type="submit">Refresh Pages</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</section>
+
 <section class="card">
   <div class="card-header">
     <div>
@@ -32,6 +89,22 @@
         </label>
         <label>Default YouTube playlist ID
           <input type="text" id="bulkPlaylist" placeholder="Optional">
+        </label>
+        <label>Default Facebook Page
+          <select id="bulkFacebookPage">
+            <option value="">Use row selection / configured fallback</option>
+            {% for page in facebook_pages %}
+              <option value="{{ page.id }}">{{ page.name }} — {{ page.id }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Default Pinterest board
+          <select id="bulkPinterestBoard">
+            <option value="">Use row selection / configured fallback</option>
+            {% for board in pinterest_boards %}
+              <option value="{{ board.id }}">{{ board.name }} — {{ board.id }}</option>
+            {% endfor %}
+          </select>
         </label>
       </div>
       <button type="button" class="secondary" onclick="applyDefaults()">Apply defaults to empty fields</button>
@@ -78,6 +151,24 @@
 
       <label>Playlist optional
         <input type="text" name="playlist___ROW_ID__" placeholder="YouTube playlist ID">
+      </label>
+
+      <label>Facebook Page
+        <select name="facebook_page_id___ROW_ID__">
+          <option value="">Use configured fallback</option>
+          {% for page in facebook_pages %}
+            <option value="{{ page.id }}">{{ page.name }} — {{ page.id }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Pinterest board
+        <select name="pinterest_board_id___ROW_ID__">
+          <option value="">Use configured fallback</option>
+          {% for board in pinterest_boards %}
+            <option value="{{ board.id }}">{{ board.name }} — {{ board.id }}</option>
+          {% endfor %}
+        </select>
       </label>
     </div>
 

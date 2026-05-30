@@ -19,6 +19,7 @@
         <tr>
           <th>ID</th>
           <th>Platform</th>
+          <th>Destination</th>
           <th>Title</th>
           <th>Scheduled</th>
           <th>Status</th>
@@ -33,6 +34,14 @@
         <tr>
           <td>#{{ job.id }}</td>
           <td>{{ job.platform }}</td>
+          <td>
+            {% if job.destination_name or job.destination_id %}
+              {{ job.destination_name or "Selected destination" }}<br>
+              <span class="muted small-text">{{ job.destination_id }}</span>
+            {% else %}
+              <span class="muted">Default</span>
+            {% endif %}
+          </td>
           <td>{{ job.title }}</td>
           <td>{{ job.scheduled_at_utc|localtime }}</td>
           <td><span class="status {{ job.status }}">{{ job.status }}</span></td>
@@ -49,7 +58,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="9" class="muted">No jobs yet.</td>
+          <td colspan="10" class="muted">No jobs yet.</td>
         </tr>
         {% endfor %}
       </tbody>

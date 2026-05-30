@@ -2,6 +2,7 @@ import time
 import requests
 
 from config import Config
+from services.pinterest_oauth import get_valid_pinterest_access_token
 from .base import BaseProvider, UploadResult
 
 
@@ -10,16 +11,18 @@ class PinterestProvider(BaseProvider):
     base_url = "https://api.pinterest.com/v5"
 
     def _headers(self):
+        access_token = get_valid_pinterest_access_token()
         return {
-            "Authorization": f"Bearer {Config.PINTEREST_ACCESS_TOKEN}",
+            "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         }
 
     def upload(self, job) -> UploadResult:
-        if not Config.PINTEREST_ACCESS_TOKEN or not Config.PINTEREST_BOARD_ID:
+        board_id = job.destination_id or Config.PINTEREST_BOARD_ID
+        if not board_id:
             return UploadResult(
                 success=False,
-                error="Missing PINTEREST_ACCESS_TOKEN or PINTEREST_BOARD_ID in .env",
+                error="Choose a Pinterest board in the UI or set PINTEREST_BOARD_ID in .env",
             )
 
         try:
@@ -94,7 +97,7 @@ class PinterestProvider(BaseProvider):
 
             # Step 4: create the Pin.
             pin_payload = {
-                "board_id": Config.PINTEREST_BOARD_ID,
+                "board_id": board_id,
                 "title": job.title[:100],
                 "description": job.description or "",
                 "media_source": {

@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 from config import Config
+from services.facebook_oauth import get_facebook_page_destination
 from .base import BaseProvider, UploadResult
 
 
@@ -12,23 +13,24 @@ class FacebookProvider(BaseProvider):
     native_schedule_max_seconds = 30 * 24 * 60 * 60
 
     def upload(self, job) -> UploadResult:
-        if not Config.FACEBOOK_PAGE_ID or not Config.FACEBOOK_PAGE_ACCESS_TOKEN:
-            return UploadResult(
-                success=False,
-                error="Missing FACEBOOK_PAGE_ID or FACEBOOK_PAGE_ACCESS_TOKEN in .env",
-            )
+        try:
+            destination = get_facebook_page_destination(job.destination_id)
+            page_id = destination["page_id"]
+            page_access_token = destination["page_access_token"]
+        except Exception as exc:
+            return UploadResult(success=False, error=str(exc))
 
         # Meta video uploads use graph-video.facebook.com.
         url = (
             f"https://graph-video.facebook.com/{Config.FACEBOOK_GRAPH_VERSION}/"
-            f"{Config.FACEBOOK_PAGE_ID}/videos"
+            f"{page_id}/videos"
         )
 
         scheduled_dt = job.scheduled_at_utc.astimezone(timezone.utc)
         now = datetime.now(timezone.utc)
 
         params = {
-            "access_token": Config.FACEBOOK_PAGE_ACCESS_TOKEN,
+            "access_token": page_access_token,
             "title": job.title,
             "description": job.description or "",
         }
@@ -60,7 +62,7 @@ class FacebookProvider(BaseProvider):
                 return UploadResult(
                     success=True,
                     external_id=data.get("id"),
-                    response=data,
+                    response={**data, "page_id": page_id, "page_name": destination.get("page_name")},
                 )
 
             return UploadResult(

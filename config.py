@@ -29,10 +29,50 @@ class Config:
     )
 
     FACEBOOK_GRAPH_VERSION = os.getenv("FACEBOOK_GRAPH_VERSION", "v25.0")
+
+    # Facebook OAuth configuration for pulling Pages dynamically.
+    # Use Meta Developer App > Facebook Login > Valid OAuth Redirect URIs.
+    FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "")
+    FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "")
+    FACEBOOK_REDIRECT_URI = os.getenv(
+        "FACEBOOK_REDIRECT_URI",
+        "http://127.0.0.1:5001/oauth/facebook/callback",
+    )
+    FACEBOOK_SCOPES = os.getenv(
+        "FACEBOOK_SCOPES",
+        "pages_show_list,pages_read_engagement,pages_manage_posts",
+    )
+
+    # Backward-compatible fallback for a single Page setup.
+    # Dynamic page selection uses cached pages from /me/accounts instead.
     FACEBOOK_PAGE_ID = os.getenv("FACEBOOK_PAGE_ID", "")
     FACEBOOK_PAGE_ACCESS_TOKEN = os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN", "")
 
+    DESTINATION_CACHE_TTL_MINUTES = int(os.getenv("DESTINATION_CACHE_TTL_MINUTES", "360"))
+
     TIKTOK_ACCESS_TOKEN = os.getenv("TIKTOK_ACCESS_TOKEN", "")
 
-    PINTEREST_ACCESS_TOKEN = os.getenv("PINTEREST_ACCESS_TOKEN", "")
+    # Pinterest OAuth configuration.
+    # Use the values from Pinterest Developer Platform > Your App > Configure.
+    PINTEREST_CLIENT_ID = os.getenv("PINTEREST_CLIENT_ID", "")
+    PINTEREST_CLIENT_SECRET = os.getenv("PINTEREST_CLIENT_SECRET", "")
+    PINTEREST_REDIRECT_URI = os.getenv(
+        "PINTEREST_REDIRECT_URI",
+        "http://127.0.0.1:5001/oauth/pinterest/callback",
+    )
+    PINTEREST_SCOPES = os.getenv(
+        "PINTEREST_SCOPES",
+        "pins:read,pins:write,boards:read",
+    )
+    PINTEREST_CONTINUOUS_REFRESH = os.getenv(
+        "PINTEREST_CONTINUOUS_REFRESH",
+        "true",
+    ).lower() == "true"
+
+    # Keep this as the target board for created Pins.
+    # Later you can add a board picker using boards:read.
     PINTEREST_BOARD_ID = os.getenv("PINTEREST_BOARD_ID", "")
+
+    # Kept only for backward compatibility/testing. The provider now prefers
+    # the OAuth token stored in the database.
+    PINTEREST_ACCESS_TOKEN = os.getenv("PINTEREST_ACCESS_TOKEN", "")
