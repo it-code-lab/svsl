@@ -93,54 +93,99 @@
   </div>
 
   <form method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
-    <details class="bulk-panel">
-      <summary>Bulk defaults</summary>
+    <section class="info-box">
+      <strong>Scheduling behavior</strong>
+      <span>YouTube uploads early and uses YouTube's native `publishAt` scheduling.</span>
+      <span>Facebook uploads early only when the publish time is inside Meta's scheduling window.</span>
+      <span>Pinterest and TikTok stay queued locally until their scheduled time, then this app uploads them.</span>
+    </section>
+
+    <section class="run-panel">
+      <div class="section-heading">
+        <h3>Run destinations</h3>
+        <p class="muted">These selections apply to every video row created in this run.</p>
+      </div>
+
+      <fieldset class="platforms">
+        <legend>Platforms</legend>
+        <label><input type="checkbox" name="platforms" value="youtube"> YouTube</label>
+        <label><input type="checkbox" name="platforms" value="facebook"> Facebook Page</label>
+        <label><input type="checkbox" name="platforms" value="tiktok"> TikTok</label>
+        <label><input type="checkbox" name="platforms" value="pinterest"> Pinterest</label>
+      </fieldset>
+
+      <div class="destination-grid">
+        <div class="destination-group youtube-group">
+          <h4>YouTube</h4>
+          <label>Channel
+            <select id="youtubeChannel" name="youtube_channel_id" data-persist="youtube_channel_id">
+              <option value="">Use single-channel fallback</option>
+              {% for channel in youtube_channels %}
+                <option value="{{ channel.id }}"{% if youtube_channels|length == 1 %} selected{% endif %}>{{ channel.name }} — {{ channel.id }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Playlist
+            <select id="youtubePlaylist" name="youtube_playlist" data-persist="youtube_playlist" disabled>
+              <option value="">Choose a YouTube channel first</option>
+            </select>
+          </label>
+          <button type="button" class="secondary compact-button" id="refreshYouTubePlaylists">Refresh playlists</button>
+        </div>
+
+        <div class="destination-group facebook-group">
+          <h4>Facebook</h4>
+          <label>Page
+            <select id="facebookPage" name="facebook_page_id" data-persist="facebook_page_id">
+              <option value="">Use configured fallback</option>
+              {% for page in facebook_pages %}
+                <option value="{{ page.id }}">{{ page.name }} — {{ page.id }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="destination-group pinterest-group">
+          <h4>Pinterest</h4>
+          <label>Board
+            <select id="pinterestBoard" name="pinterest_board_id" data-persist="pinterest_board_id">
+              <option value="">Use configured fallback</option>
+              {% for board in pinterest_boards %}
+                <option value="{{ board.id }}">{{ board.name }} — {{ board.id }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="run-panel">
+      <div class="section-heading">
+        <h3>Spreadsheet paste</h3>
+        <p class="muted">Paste tab-separated rows from Excel. Columns: title, description, tags, video file, thumbnail image, scheduled date/time, Pinterest URL.</p>
+      </div>
+      <textarea id="pasteTable" rows="5" placeholder="Title&#9;Description&#9;Tags&#9;video.mp4&#9;thumb.jpg&#9;2026-06-01 09:00&#9;https://example.com"></textarea>
+      <div class="actions compact-actions">
+        <button type="button" class="secondary" id="replaceRowsFromPaste">Replace rows from paste</button>
+        <button type="button" class="secondary" id="appendRowsFromPaste">Append pasted rows</button>
+      </div>
+    </section>
+
+    <section class="run-panel">
+      <div class="section-heading">
+        <h3>Schedule helper</h3>
+        <p class="muted">Fill scheduled times down the current rows from a start time and a fixed gap.</p>
+      </div>
       <div class="grid">
-        <label>Default title prefix
-          <input type="text" id="bulkTitle" placeholder="Optional prefix">
+        <label>Start date/time
+          <input type="datetime-local" id="scheduleStart">
         </label>
-        <label>Default description
-          <textarea id="bulkDescription" rows="3" placeholder="Description to apply to empty rows"></textarea>
-        </label>
-        <label>Default tags
-          <input type="text" id="bulkTags" placeholder="tag1, tag2, #shorts">
-        </label>
-        <label>Default scheduled time
-          <input type="datetime-local" id="bulkScheduled">
-        </label>
-        <label>Default channel name label
-          <input type="text" id="bulkChannel" placeholder="Optional">
-        </label>
-        <label>Default YouTube playlist ID
-          <input type="text" id="bulkPlaylist" placeholder="Optional">
-        </label>
-        <label>Default YouTube channel
-          <select id="bulkYouTubeChannel">
-            <option value="">Use row selection / single-channel fallback</option>
-            {% for channel in youtube_channels %}
-              <option value="{{ channel.id }}">{{ channel.name }} — {{ channel.id }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>Default Facebook Page
-          <select id="bulkFacebookPage">
-            <option value="">Use row selection / configured fallback</option>
-            {% for page in facebook_pages %}
-              <option value="{{ page.id }}">{{ page.name }} — {{ page.id }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>Default Pinterest board
-          <select id="bulkPinterestBoard">
-            <option value="">Use row selection / configured fallback</option>
-            {% for board in pinterest_boards %}
-              <option value="{{ board.id }}">{{ board.name }} — {{ board.id }}</option>
-            {% endfor %}
-          </select>
+        <label>Gap minutes
+          <input type="number" id="scheduleGapMinutes" min="0" step="1" value="60">
         </label>
       </div>
-      <button type="button" class="secondary" onclick="applyDefaults()">Apply defaults to empty fields</button>
-    </details>
+      <button type="button" class="secondary" id="fillScheduleTimes">Fill row schedule times</button>
+    </section>
 
     <div id="rows" class="rows"></div>
 
@@ -162,56 +207,33 @@
 
     <div class="grid">
       <label>Video file
-        <input type="file" name="video_file___ROW_ID__" accept="video/mp4,video/quicktime,video/webm,.m4v" required>
+        <input type="file" name="video_file___ROW_ID__" accept="video/mp4,video/quicktime,video/webm,.m4v">
+      </label>
+
+      <label>Video filename in library
+        <input type="text" name="video_file_name___ROW_ID__" placeholder="video.mp4">
       </label>
 
       <label>Thumbnail image optional
         <input type="file" name="thumbnail_file___ROW_ID__" accept="image/jpeg,image/png,image/webp">
       </label>
 
-      <label>Title
-        <input type="text" name="title___ROW_ID__" placeholder="Leave blank to use file name">
+      <label>Thumbnail filename optional
+        <input type="text" name="thumbnail_file_name___ROW_ID__" placeholder="thumbnail.jpg">
       </label>
 
       <label>Scheduled publish date/time
         <input type="datetime-local" name="scheduled_at___ROW_ID__">
       </label>
 
-      <label>Channel name optional label
-        <input type="text" name="channel_name___ROW_ID__" placeholder="For your reference">
-      </label>
-
-      <label>Playlist optional
-        <input type="text" name="playlist___ROW_ID__" placeholder="YouTube playlist ID">
-      </label>
-
-      <label>YouTube channel
-        <select name="youtube_channel_id___ROW_ID__">
-          <option value="">Use single-channel fallback</option>
-          {% for channel in youtube_channels %}
-            <option value="{{ channel.id }}">{{ channel.name }} — {{ channel.id }}</option>
-          {% endfor %}
-        </select>
-      </label>
-
-      <label>Facebook Page
-        <select name="facebook_page_id___ROW_ID__">
-          <option value="">Use configured fallback</option>
-          {% for page in facebook_pages %}
-            <option value="{{ page.id }}">{{ page.name }} — {{ page.id }}</option>
-          {% endfor %}
-        </select>
-      </label>
-
-      <label>Pinterest board
-        <select name="pinterest_board_id___ROW_ID__">
-          <option value="">Use configured fallback</option>
-          {% for board in pinterest_boards %}
-            <option value="{{ board.id }}">{{ board.name }} — {{ board.id }}</option>
-          {% endfor %}
-        </select>
+      <label>Pinterest URL optional
+        <input type="url" name="pinterest_link_url___ROW_ID__" placeholder="https://example.com">
       </label>
     </div>
+
+    <label>Title
+      <input type="text" name="title___ROW_ID__" placeholder="Leave blank to use file name">
+    </label>
 
     <label>Description
       <textarea name="description___ROW_ID__" rows="4" placeholder="Video description"></textarea>
@@ -220,14 +242,6 @@
     <label>Tags
       <input type="text" name="tags___ROW_ID__" placeholder="tag1, tag2, #shorts">
     </label>
-
-    <fieldset class="platforms">
-      <legend>Platforms</legend>
-      <label><input type="checkbox" name="platforms___ROW_ID__" value="youtube"> YouTube</label>
-      <label><input type="checkbox" name="platforms___ROW_ID__" value="facebook"> Facebook Page</label>
-      <label><input type="checkbox" name="platforms___ROW_ID__" value="tiktok"> TikTok</label>
-      <label><input type="checkbox" name="platforms___ROW_ID__" value="pinterest"> Pinterest</label>
-    </fieldset>
   </section>
 </template>
 

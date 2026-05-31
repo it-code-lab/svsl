@@ -105,6 +105,8 @@ class PinterestProvider(BaseProvider):
                     "media_id": media_id,
                 },
             }
+            if job.link_url:
+                pin_payload["link"] = job.link_url
 
             pin_response = requests.post(
                 f"{self.base_url}/pins",

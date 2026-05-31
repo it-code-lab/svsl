@@ -15,6 +15,7 @@ from services.destination_cache import (
 
 PROVIDER = "youtube"
 OPTION_TYPE_CHANNELS = "channels"
+OPTION_TYPE_PLAYLISTS_PREFIX = "playlists"
 
 YOUTUBE_SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
@@ -132,6 +133,40 @@ def get_youtube_token_status() -> Dict[str, Any]:
     }
 
 
+def list_youtube_playlists(channel_id: str, force: bool = False) -> List[Dict[str, Any]]:
+    if not channel_id:
+        raise RuntimeError("Choose a YouTube channel before loading playlists.")
+
+    option_type = _playlist_option_type(channel_id)
+    if not force and cache_is_fresh(PROVIDER, option_type):
+        return get_cached_options(PROVIDER, option_type)
+
+    credentials = get_youtube_credentials_for_channel(channel_id)
+    youtube = build("youtube", "v3", credentials=credentials)
+    playlists = []
+    page_token = None
+
+    while True:
+        request = youtube.playlists().list(
+            part="snippet,contentDetails,status",
+            mine=True,
+            maxResults=50,
+            pageToken=page_token,
+        )
+        response = request.execute()
+
+        for item in response.get("items", []):
+            playlist = _playlist_item_to_option(item, channel_id)
+            if playlist:
+                playlists.append(playlist)
+
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    return upsert_cached_options(PROVIDER, option_type, playlists)
+
+
 def get_youtube_credentials_for_channel(channel_id: Optional[str]) -> Credentials:
     token_file = _token_file_for_channel(channel_id)
     return load_youtube_credentials_from_file(token_file)
@@ -204,6 +239,10 @@ def _youtube_token_files() -> List[Path]:
     return token_files
 
 
+def _playlist_option_type(channel_id: str) -> str:
+    return f"{OPTION_TYPE_PLAYLISTS_PREFIX}:{channel_id}"
+
+
 def _channel_item_to_option(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     channel_id = item.get("id")
     if not channel_id:
@@ -223,5 +262,33 @@ def _channel_item_to_option(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "custom_url": snippet.get("customUrl"),
             "thumbnail_url": default_thumbnail.get("url"),
             "uploads_playlist_id": related_playlists.get("uploads"),
+        },
+    }
+
+
+def _playlist_item_to_option(
+    item: Dict[str, Any],
+    expected_channel_id: str,
+) -> Optional[Dict[str, Any]]:
+    playlist_id = item.get("id")
+    if not playlist_id:
+        return None
+
+    snippet = item.get("snippet") or {}
+    channel_id = snippet.get("channelId")
+    if channel_id and channel_id != expected_channel_id:
+        return None
+
+    content_details = item.get("contentDetails") or {}
+    status = item.get("status") or {}
+
+    return {
+        "id": playlist_id,
+        "name": snippet.get("title") or playlist_id,
+        "extra": {
+            "channel_id": channel_id or expected_channel_id,
+            "description": snippet.get("description"),
+            "privacy_status": status.get("privacyStatus"),
+            "item_count": content_details.get("itemCount"),
         },
     }

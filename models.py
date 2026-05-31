@@ -33,6 +33,7 @@ class ScheduledPost(db.Model):
 
     video_path = db.Column(db.String(1000), nullable=False)
     thumbnail_path = db.Column(db.String(1000), nullable=True)
+    link_url = db.Column(db.String(1000), nullable=True)
 
     status = db.Column(db.String(32), nullable=False, default="queued", index=True)
     attempts = db.Column(db.Integer, nullable=False, default=0)

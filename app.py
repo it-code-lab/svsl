@@ -27,7 +27,11 @@ from services.pinterest_oauth import (
     refresh_pinterest_token,
     validate_pinterest_state,
 )
-from services.youtube_oauth import get_youtube_token_status, list_youtube_channels
+from services.youtube_oauth import (
+    get_youtube_token_status,
+    list_youtube_channels,
+    list_youtube_playlists,
+)
 
 
 ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "m4v", "webm"}
@@ -85,6 +89,17 @@ def create_app():
         try:
             channels = list_youtube_channels(force=request.args.get("force") == "true")
             return jsonify({"items": channels})
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @app.route("/api/youtube/channels/<channel_id>/playlists", methods=["GET"])
+    def youtube_channel_playlists_api(channel_id):
+        try:
+            playlists = list_youtube_playlists(
+                channel_id,
+                force=request.args.get("force") == "true",
+            )
+            return jsonify({"items": playlists})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400
 
@@ -217,31 +232,46 @@ def create_app():
             flash("Add at least one video row.", "error")
             return redirect(url_for("index"))
 
+        platforms = request.form.getlist("platforms")
+        if not platforms:
+            flash("Choose at least one platform for this run.", "error")
+            return redirect(url_for("index"))
+
+        selected_destinations = {
+            "youtube": request.form.get("youtube_channel_id", "").strip(),
+            "facebook": request.form.get("facebook_page_id", "").strip(),
+            "pinterest": request.form.get("pinterest_board_id", "").strip(),
+        }
+        youtube_playlist = request.form.get("youtube_playlist", "").strip()
+
         created_count = 0
         user_tz = ZoneInfo(app.config["APP_TIMEZONE"])
 
         for row_id in row_ids:
             video_file = request.files.get(f"video_file_{row_id}")
-            if not video_file or not video_file.filename:
-                continue
-
-            if not is_allowed(video_file.filename, ALLOWED_VIDEO_EXTENSIONS):
-                flash(f"Skipped {video_file.filename}: unsupported video type.", "error")
-                continue
 
             title = request.form.get(f"title_{row_id}", "").strip()
-            if not title:
-                title = Path(video_file.filename).stem
-
             description = request.form.get(f"description_{row_id}", "").strip()
             tags = request.form.get(f"tags_{row_id}", "").strip()
             scheduled_local = request.form.get(f"scheduled_at_{row_id}", "").strip()
-            channel_name = request.form.get(f"channel_name_{row_id}", "").strip()
-            playlist = request.form.get(f"playlist_{row_id}", "").strip()
-            platforms = request.form.getlist(f"platforms_{row_id}")
+            pinterest_link_url = request.form.get(f"pinterest_link_url_{row_id}", "").strip()
+            video_name = request.form.get(f"video_file_name_{row_id}", "").strip()
+            thumbnail_name = request.form.get(f"thumbnail_file_name_{row_id}", "").strip()
+            thumbnail_file = request.files.get(f"thumbnail_file_{row_id}")
 
-            if not platforms:
-                flash(f"Skipped {video_file.filename}: choose at least one platform.", "error")
+            if not any(
+                [
+                    video_file and video_file.filename,
+                    video_name,
+                    thumbnail_file and thumbnail_file.filename,
+                    thumbnail_name,
+                    title,
+                    description,
+                    tags,
+                    scheduled_local,
+                    pinterest_link_url,
+                ]
+            ):
                 continue
 
             try:
@@ -252,24 +282,51 @@ def create_app():
                 else:
                     scheduled_utc = datetime.now(timezone.utc)
             except ValueError:
-                flash(f"Skipped {video_file.filename}: invalid scheduled date/time.", "error")
+                row_label = request.form.get(f"video_file_name_{row_id}", "").strip() or "a row"
+                flash(f"Skipped {row_label}: invalid scheduled date/time.", "error")
                 continue
 
-            video_path = save_upload(video_file, upload_folder)
+            video_path = None
+            if video_file and video_file.filename:
+                if not is_allowed(video_file.filename, ALLOWED_VIDEO_EXTENSIONS):
+                    flash(f"Skipped {video_file.filename}: unsupported video type.", "error")
+                    continue
+                video_path = save_upload(video_file, upload_folder)
+            else:
+                if video_name:
+                    try:
+                        video_path = resolve_library_file(
+                            video_name,
+                            app.config["VIDEO_LIBRARY_FOLDER"],
+                            ALLOWED_VIDEO_EXTENSIONS,
+                        )
+                    except ValueError as exc:
+                        flash(f"Skipped {video_name}: {exc}", "error")
+                        continue
+
+            if not video_path:
+                flash("Skipped a row: choose a video file or provide a video filename.", "error")
+                continue
+
+            if not title:
+                title = Path(video_path).stem
 
             thumbnail_path = None
-            thumbnail_file = request.files.get(f"thumbnail_file_{row_id}")
             if thumbnail_file and thumbnail_file.filename:
                 if is_allowed(thumbnail_file.filename, ALLOWED_IMAGE_EXTENSIONS):
                     thumbnail_path = save_upload(thumbnail_file, upload_folder)
                 else:
-                    flash(f"Skipped thumbnail for {video_file.filename}: unsupported image type.", "error")
-
-            selected_destinations = {
-                "youtube": request.form.get(f"youtube_channel_id_{row_id}", "").strip(),
-                "facebook": request.form.get(f"facebook_page_id_{row_id}", "").strip(),
-                "pinterest": request.form.get(f"pinterest_board_id_{row_id}", "").strip(),
-            }
+                    flash(f"Skipped thumbnail for {Path(video_path).name}: unsupported image type.", "error")
+            else:
+                if thumbnail_name:
+                    try:
+                        thumbnail_path = resolve_library_file(
+                            thumbnail_name,
+                            app.config["THUMBNAIL_LIBRARY_FOLDER"],
+                            ALLOWED_IMAGE_EXTENSIONS,
+                        )
+                    except ValueError as exc:
+                        flash(f"Skipped thumbnail {thumbnail_name}: {exc}", "error")
 
             for platform in platforms:
                 destination_id = selected_destinations.get(platform, "")
@@ -281,12 +338,13 @@ def create_app():
                     description=description,
                     tags=tags,
                     scheduled_at_utc=scheduled_utc,
-                    channel_name=channel_name,
-                    playlist=playlist,
+                    channel_name=None,
+                    playlist=youtube_playlist if platform == "youtube" else None,
                     destination_id=destination_id or None,
                     destination_name=destination_name,
                     video_path=video_path,
                     thumbnail_path=thumbnail_path,
+                    link_url=pinterest_link_url if platform == "pinterest" else None,
                     status="queued",
                 )
                 db.session.add(job)
@@ -371,6 +429,25 @@ def save_upload(file_storage, upload_folder: Path):
     return str(path)
 
 
+def resolve_library_file(filename: str, folder: str, allowed_exts):
+    if not filename:
+        raise ValueError("missing filename")
+
+    if not is_allowed(filename, allowed_exts):
+        raise ValueError("unsupported file type")
+
+    base_path = Path(folder).resolve()
+    candidate = (base_path / filename).resolve()
+
+    if candidate != base_path and base_path not in candidate.parents:
+        raise ValueError("filename must stay inside the configured folder")
+
+    if not candidate.exists() or not candidate.is_file():
+        raise ValueError(f"file not found in {base_path}")
+
+    return str(candidate)
+
+
 def is_allowed(filename, allowed_exts):
     if "." not in filename:
         return False
@@ -390,6 +467,7 @@ def ensure_sqlite_schema_updates():
         additions = {
             "destination_id": "ALTER TABLE scheduled_posts ADD COLUMN destination_id VARCHAR(255)",
             "destination_name": "ALTER TABLE scheduled_posts ADD COLUMN destination_name VARCHAR(255)",
+            "link_url": "ALTER TABLE scheduled_posts ADD COLUMN link_url VARCHAR(1000)",
         }
         for column, ddl in additions.items():
             if column not in existing:

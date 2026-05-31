@@ -12,6 +12,8 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
+    VIDEO_LIBRARY_FOLDER = os.getenv("VIDEO_LIBRARY_FOLDER", os.getenv("UPLOAD_FOLDER", "uploads"))
+    THUMBNAIL_LIBRARY_FOLDER = os.getenv("THUMBNAIL_LIBRARY_FOLDER", os.getenv("UPLOAD_FOLDER", "uploads"))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "2048")) * 1024 * 1024
     APP_TIMEZONE = os.getenv("APP_TIMEZONE", "America/Montreal")
 
