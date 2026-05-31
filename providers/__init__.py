@@ -1,16 +1,49 @@
-from .youtube import YouTubeProvider
-from .facebook import FacebookProvider
-from .tiktok import TikTokProvider
-from .pinterest import PinterestProvider
+_PROVIDER_CLASS_NAMES = {
+    "youtube": "YouTubeProvider",
+    "facebook": "FacebookProvider",
+    "tiktok": "TikTokProvider",
+    "pinterest": "PinterestProvider",
+}
+
+
+def __getattr__(name: str):
+    if name == "YouTubeProvider":
+        from .youtube import YouTubeProvider
+
+        return YouTubeProvider
+
+    if name == "FacebookProvider":
+        from .facebook import FacebookProvider
+
+        return FacebookProvider
+
+    if name == "TikTokProvider":
+        from .tiktok import TikTokProvider
+
+        return TikTokProvider
+
+    if name == "PinterestProvider":
+        from .pinterest import PinterestProvider
+
+        return PinterestProvider
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 def get_provider(platform: str):
     platform = platform.lower().strip()
-    providers = {
-        "youtube": YouTubeProvider,
-        "facebook": FacebookProvider,
-        "tiktok": TikTokProvider,
-        "pinterest": PinterestProvider,
-    }
-    if platform not in providers:
-        raise ValueError(f"Unsupported platform: {platform}")
-    return providers[platform]()
+
+    provider_class_name = _PROVIDER_CLASS_NAMES.get(platform)
+    if provider_class_name:
+        return __getattr__(provider_class_name)()
+
+    raise ValueError(f"Unsupported platform: {platform}")
+
+
+__all__ = [
+    "get_provider",
+    "YouTubeProvider",
+    "FacebookProvider",
+    "TikTokProvider",
+    "PinterestProvider",
+]

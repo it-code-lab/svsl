@@ -1,7 +1,8 @@
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 
 import requests
 from config import Config
+from services.datetime_utils import ensure_utc_required, utc_now
 from services.facebook_oauth import get_facebook_page_destination
 from .base import BaseProvider, UploadResult
 
@@ -26,8 +27,8 @@ class FacebookProvider(BaseProvider):
             f"{page_id}/videos"
         )
 
-        scheduled_dt = job.scheduled_at_utc.astimezone(timezone.utc)
-        now = datetime.now(timezone.utc)
+        scheduled_dt = ensure_utc_required(job.scheduled_at_utc, "scheduled_at_utc")
+        now = utc_now()
 
         params = {
             "access_token": page_access_token,
@@ -42,7 +43,10 @@ class FacebookProvider(BaseProvider):
             if scheduled_dt > now + timedelta(seconds=self.native_schedule_max_seconds):
                 return UploadResult(
                     success=False,
-                    error="Facebook scheduled_publish_time is more than 30 days away. The app will retry later when it is inside Facebook's scheduling window.",
+                    error=(
+                        "Facebook scheduled_publish_time is more than 30 days away. "
+                        "The app will retry later when it is inside Facebook's scheduling window."
+                    ),
                 )
 
             params["published"] = "false"
@@ -52,9 +56,7 @@ class FacebookProvider(BaseProvider):
 
         try:
             with open(job.video_path, "rb") as video_file:
-                files = {
-                    "source": video_file,
-                }
+                files = {"source": video_file}
                 response = requests.post(url, data=params, files=files, timeout=600)
 
             data = response.json() if response.content else {}
@@ -62,7 +64,11 @@ class FacebookProvider(BaseProvider):
                 return UploadResult(
                     success=True,
                     external_id=data.get("id"),
-                    response={**data, "page_id": page_id, "page_name": destination.get("page_name")},
+                    response={
+                        **data,
+                        "page_id": page_id,
+                        "page_name": destination.get("page_name"),
+                    },
                 )
 
             return UploadResult(

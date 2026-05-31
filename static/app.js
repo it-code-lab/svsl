@@ -25,6 +25,7 @@ function applyDefaults() {
     scheduled: document.getElementById("bulkScheduled").value,
     channel: document.getElementById("bulkChannel").value,
     playlist: document.getElementById("bulkPlaylist").value,
+    youtubeChannel: document.getElementById("bulkYouTubeChannel").value,
     facebookPage: document.getElementById("bulkFacebookPage").value,
     pinterestBoard: document.getElementById("bulkPinterestBoard").value,
   };
@@ -36,6 +37,7 @@ function applyDefaults() {
     const scheduled = row.querySelector('input[name^="scheduled_at_"]');
     const channel = row.querySelector('input[name^="channel_name_"]');
     const playlist = row.querySelector('input[name^="playlist_"]');
+    const youtubeChannel = row.querySelector('select[name^="youtube_channel_id_"]');
     const facebookPage = row.querySelector('select[name^="facebook_page_id_"]');
     const pinterestBoard = row.querySelector('select[name^="pinterest_board_id_"]');
 
@@ -47,6 +49,7 @@ function applyDefaults() {
     if (scheduled && !scheduled.value) scheduled.value = bulk.scheduled;
     if (channel && !channel.value) channel.value = bulk.channel;
     if (playlist && !playlist.value) playlist.value = bulk.playlist;
+    if (youtubeChannel && !youtubeChannel.value) youtubeChannel.value = bulk.youtubeChannel;
     if (facebookPage && !facebookPage.value) facebookPage.value = bulk.facebookPage;
     if (pinterestBoard && !pinterestBoard.value) pinterestBoard.value = bulk.pinterestBoard;
   });

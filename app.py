@@ -27,6 +27,7 @@ from services.pinterest_oauth import (
     refresh_pinterest_token,
     validate_pinterest_state,
 )
+from services.youtube_oauth import get_youtube_token_status, list_youtube_channels
 
 
 ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "m4v", "webm"}
@@ -48,22 +49,44 @@ def create_app():
 
     @app.route("/", methods=["GET"])
     def index():
+        youtube_status = get_youtube_token_status()
         pinterest_status = get_pinterest_token_status()
         facebook_status = get_facebook_token_status()
 
+        youtube_channels, youtube_channels_error = _safe_destination_call(list_youtube_channels)
         pinterest_boards, pinterest_boards_error = _safe_destination_call(list_pinterest_boards)
         facebook_pages, facebook_pages_error = _safe_destination_call(list_facebook_pages)
 
         return render_template(
             "index.html",
             app_timezone=app.config["APP_TIMEZONE"],
+            youtube_status=youtube_status,
             pinterest_status=pinterest_status,
             facebook_status=facebook_status,
+            youtube_channels=youtube_channels,
             pinterest_boards=pinterest_boards,
             facebook_pages=facebook_pages,
+            youtube_channels_error=youtube_channels_error,
             pinterest_boards_error=pinterest_boards_error,
             facebook_pages_error=facebook_pages_error,
         )
+
+    @app.route("/cache/youtube/channels/refresh", methods=["POST"])
+    def youtube_channels_refresh():
+        try:
+            channels = list_youtube_channels(force=True)
+            flash(f"YouTube channels cache refreshed: {len(channels)} channel(s).", "success")
+        except Exception as exc:
+            flash(str(exc), "error")
+        return redirect(url_for("index"))
+
+    @app.route("/api/youtube/channels", methods=["GET"])
+    def youtube_channels_api():
+        try:
+            channels = list_youtube_channels(force=request.args.get("force") == "true")
+            return jsonify({"items": channels})
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 400
 
     @app.route("/oauth/pinterest/connect", methods=["GET"])
     def pinterest_connect():
@@ -243,6 +266,7 @@ def create_app():
                     flash(f"Skipped thumbnail for {video_file.filename}: unsupported image type.", "error")
 
             selected_destinations = {
+                "youtube": request.form.get(f"youtube_channel_id_{row_id}", "").strip(),
                 "facebook": request.form.get(f"facebook_page_id_{row_id}", "").strip(),
                 "pinterest": request.form.get(f"pinterest_board_id_{row_id}", "").strip(),
             }
@@ -328,6 +352,7 @@ def lookup_destination_name(platform: str, destination_id: str):
     if not destination_id:
         return None
     mapping = {
+        "youtube": ("youtube", "channels"),
         "facebook": ("facebook", "pages"),
         "pinterest": ("pinterest", "boards"),
     }

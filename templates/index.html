@@ -6,6 +6,30 @@
   <section class="card integration-card">
     <div class="card-header">
       <div>
+        <h2>YouTube connection</h2>
+        {% if youtube_status.connected %}
+          <p class="muted">
+            Connected channels cached: {{ youtube_channels|length }}.
+            Token folder: {{ youtube_status.token_dir }}.
+          </p>
+          {% if youtube_channels_error %}<p class="inline-error">{{ youtube_channels_error }}</p>{% endif %}
+        {% else %}
+          <p class="muted">Not connected. Run <code>python scripts/youtube_auth.py</code> once per channel.</p>
+        {% endif %}
+      </div>
+      <div class="connection-actions">
+        {% if youtube_status.connected %}
+        <form method="post" action="{{ url_for('youtube_channels_refresh') }}">
+          <button class="secondary" type="submit">Refresh channels</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card integration-card">
+    <div class="card-header">
+      <div>
         <h2>Pinterest connection</h2>
         {% if pinterest_status.connected %}
           <p class="muted">
@@ -90,6 +114,14 @@
         <label>Default YouTube playlist ID
           <input type="text" id="bulkPlaylist" placeholder="Optional">
         </label>
+        <label>Default YouTube channel
+          <select id="bulkYouTubeChannel">
+            <option value="">Use row selection / single-channel fallback</option>
+            {% for channel in youtube_channels %}
+              <option value="{{ channel.id }}">{{ channel.name }} — {{ channel.id }}</option>
+            {% endfor %}
+          </select>
+        </label>
         <label>Default Facebook Page
           <select id="bulkFacebookPage">
             <option value="">Use row selection / configured fallback</option>
@@ -151,6 +183,15 @@
 
       <label>Playlist optional
         <input type="text" name="playlist___ROW_ID__" placeholder="YouTube playlist ID">
+      </label>
+
+      <label>YouTube channel
+        <select name="youtube_channel_id___ROW_ID__">
+          <option value="">Use single-channel fallback</option>
+          {% for channel in youtube_channels %}
+            <option value="{{ channel.id }}">{{ channel.name }} — {{ channel.id }}</option>
+          {% endfor %}
+        </select>
       </label>
 
       <label>Facebook Page

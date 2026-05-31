@@ -7,3 +7,4 @@ uploads/
 *.db
 instance/*.db
 *.md
+instance/*

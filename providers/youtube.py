@@ -1,34 +1,19 @@
-import json
-from pathlib import Path
-from datetime import timezone, datetime, timedelta
+from datetime import timedelta
 
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-from config import Config
+from services.datetime_utils import ensure_utc_required, utc_now
+from services.youtube_oauth import YOUTUBE_SCOPES, get_youtube_credentials_for_channel
 from .base import BaseProvider, UploadResult
-
-
-YOUTUBE_SCOPES = [
-    "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube",
-]
 
 
 class YouTubeProvider(BaseProvider):
     name = "youtube"
     supports_native_schedule = True
 
-    def _client(self):
-        token_file = Path(Config.YOUTUBE_TOKEN_FILE)
-        if not token_file.exists():
-            raise RuntimeError(
-                f"YouTube token file not found: {token_file}. "
-                "Run scripts/youtube_auth.py first."
-            )
-
-        creds = Credentials.from_authorized_user_file(str(token_file), YOUTUBE_SCOPES)
+    def _client(self, channel_id=None):
+        creds = get_youtube_credentials_for_channel(channel_id)
         return build("youtube", "v3", credentials=creds)
 
     @staticmethod
@@ -39,10 +24,10 @@ class YouTubeProvider(BaseProvider):
 
     def upload(self, job) -> UploadResult:
         try:
-            youtube = self._client()
+            youtube = self._client(job.destination_id)
 
-            scheduled_dt = job.scheduled_at_utc.astimezone(timezone.utc)
-            now = datetime.now(timezone.utc)
+            scheduled_dt = ensure_utc_required(job.scheduled_at_utc, "scheduled_at_utc")
+            now = utc_now()
 
             status_body = {
                 "selfDeclaredMadeForKids": False,
@@ -52,14 +37,18 @@ class YouTubeProvider(BaseProvider):
             # If the user chose "now" or a time too close to now, publish immediately.
             if scheduled_dt > now + timedelta(minutes=2):
                 publish_at = scheduled_dt.isoformat().replace("+00:00", "Z")
-                status_body.update({
-                    "privacyStatus": "private",
-                    "publishAt": publish_at,
-                })
+                status_body.update(
+                    {
+                        "privacyStatus": "private",
+                        "publishAt": publish_at,
+                    }
+                )
             else:
-                status_body.update({
-                    "privacyStatus": "public",
-                })
+                status_body.update(
+                    {
+                        "privacyStatus": "public",
+                    }
+                )
 
             body = {
                 "snippet": {
@@ -97,7 +86,6 @@ class YouTubeProvider(BaseProvider):
                 ).execute()
 
             # In this starter, playlist is expected to be a YouTube playlist ID.
-            # Playlist title lookup/creation can be added later.
             if job.playlist and video_id:
                 youtube.playlistItems().insert(
                     part="snippet",

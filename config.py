@@ -27,6 +27,10 @@ class Config:
         "YOUTUBE_TOKEN_FILE",
         "instance/youtube_token.json",
     )
+    YOUTUBE_TOKEN_DIR = os.getenv(
+        "YOUTUBE_TOKEN_DIR",
+        "instance/youtube_tokens",
+    )
 
     FACEBOOK_GRAPH_VERSION = os.getenv("FACEBOOK_GRAPH_VERSION", "v25.0")
 

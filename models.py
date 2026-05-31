@@ -4,6 +4,14 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+def _ensure_utc(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 class ScheduledPost(db.Model):
     __tablename__ = "scheduled_posts"
 
@@ -40,13 +48,16 @@ class ScheduledPost(db.Model):
     )
 
     def is_due(self):
-        return self.scheduled_at_utc <= datetime.now(timezone.utc)
+        scheduled_at = _ensure_utc(self.scheduled_at_utc)
+        if scheduled_at is None:
+            return False
+        return scheduled_at <= datetime.now(timezone.utc)
 
 
 class OAuthToken(db.Model):
     """Stores OAuth tokens for provider integrations.
 
-    This starter app stores one Pinterest connection for the app/admin account.
+    This starter app stores one Pinterest/Facebook connection for the app/admin account.
     For a multi-user SaaS, add user_id/account_id and encrypt token fields.
     """
 

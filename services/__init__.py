@@ -1,27 +1,35 @@
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
+from pathlib import Path
 
-from models import ScheduledPost, db
+from models import db, ScheduledPost
 from providers import get_provider
+from services.datetime_utils import ensure_utc, ensure_utc_required, utc_now
 
 
-def provider_ready_to_upload(job, provider, now):
+def provider_ready_to_upload(job, provider, now=None):
     """Return True when this job should be sent to the platform now.
 
     Native-schedule platforms are sent early so the platform can hold the post
     and publish later. Non-native platforms are held locally until due time.
+
+    Important: SQLite may return naive datetimes, so normalize all DB datetimes
+    to aware UTC before comparing them.
     """
+    now = ensure_utc(now) or utc_now()
+    scheduled_at = ensure_utc_required(job.scheduled_at_utc, "scheduled_at_utc")
+
     if provider.supports_native_schedule:
         max_seconds = provider.native_schedule_max_seconds
-        if max_seconds is not None and job.scheduled_at_utc > now + timedelta(seconds=max_seconds):
+        if max_seconds is not None and scheduled_at > now + timedelta(seconds=max_seconds):
             return False
         return True
 
-    return job.scheduled_at_utc <= now
+    return scheduled_at <= now
 
 
 def process_ready_posts(limit=5, scan_limit=100):
-    now = datetime.now(timezone.utc)
+    now = utc_now()
 
     candidates = (
         ScheduledPost.query
@@ -42,7 +50,8 @@ def process_ready_posts(limit=5, scan_limit=100):
         if not provider_ready_to_upload(job, provider, now):
             continue
 
-        was_future_scheduled = job.scheduled_at_utc > now
+        scheduled_at = ensure_utc_required(job.scheduled_at_utc, "scheduled_at_utc")
+        was_future_scheduled = scheduled_at > now
 
         job.status = "running"
         job.attempts += 1
@@ -86,4 +95,4 @@ def process_due_posts(limit=5):
 
 
 def ensure_upload_folder(path):
-    path.mkdir(parents=True, exist_ok=True)
+    Path(path).mkdir(parents=True, exist_ok=True)
