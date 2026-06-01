@@ -13,3 +13,26 @@ Press CTRL+C to quit
 127.0.0.1 - - [31/May/2026 14:32:12] "GET / HTTP/1.1" 200 -
 127.0.0.1 - - [31/May/2026 14:32:12] "GET /static/styles.css HTTP/1.1" 200 -
 127.0.0.1 - - [31/May/2026 14:32:12] "GET /static/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/May/2026 20:42:23] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [31/May/2026 20:42:23] "GET /static/styles.css HTTP/1.1" 304 -
+127.0.0.1 - - [31/May/2026 20:42:23] "GET /static/app.js HTTP/1.1" 304 -
+127.0.0.1 - - [01/Jun/2026 07:40:43] "GET /api/youtube/channels/UCFQ-Y_0U2rMAaSkw3Xa-Nqw/playlists HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:41:09] "POST /submit HTTP/1.1" 302 -
+127.0.0.1 - - [01/Jun/2026 07:41:09] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:41:09] "GET /static/styles.css HTTP/1.1" 304 -
+127.0.0.1 - - [01/Jun/2026 07:42:13] "POST /admin/run-due?key=change-me HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:46:53] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:49:08] "POST /submit HTTP/1.1" 302 -
+127.0.0.1 - - [01/Jun/2026 07:49:08] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:49:08] "GET /static/styles.css HTTP/1.1" 304 -
+127.0.0.1 - - [01/Jun/2026 07:51:04] "POST /admin/run-due?key=change-me HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:55:23] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:55:56] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:55:56] "GET /static/styles.css HTTP/1.1" 304 -
+127.0.0.1 - - [01/Jun/2026 07:56:45] "POST /admin/run-due?key=change-me HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:57:03] "GET /jobs HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2026 07:57:03] "GET /static/styles.css HTTP/1.1" 304 -
+ * Detected change in 'C:\\0.data\\4.SM-WSpace\\6B.Python\\25.social_video_scheduler\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 210-757-064

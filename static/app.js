@@ -165,12 +165,12 @@ function initScheduleHelper() {
 
   button.addEventListener("click", () => {
     const startValue = document.getElementById("scheduleStart").value;
-    const gapMinutes = Number(document.getElementById("scheduleGapMinutes").value || "0");
+    const gapDays = Number(document.getElementById("scheduleGapDays").value || "0");
     if (!startValue) return;
 
     const startDate = new Date(startValue);
     document.querySelectorAll('.video-row input[name^="scheduled_at_"]').forEach((input, index) => {
-      const nextDate = new Date(startDate.getTime() + index * gapMinutes * 60 * 1000);
+      const nextDate = new Date(startDate.getTime() + index * gapDays * 24 * 60 * 60 * 1000);
       input.value = toDateTimeLocalValue(nextDate);
     });
   });

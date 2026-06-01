@@ -92,7 +92,7 @@
     <button class="secondary" type="button" onclick="addRow()">+ Add video row</button>
   </div>
 
-  <form method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
+  <form method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data" target="_blank">
     <section class="info-box">
       <strong>Scheduling behavior</strong>
       <span>YouTube uploads early and uses YouTube's native `publishAt` scheduling.</span>
@@ -174,14 +174,14 @@
     <section class="run-panel">
       <div class="section-heading">
         <h3>Schedule helper</h3>
-        <p class="muted">Fill scheduled times down the current rows from a start time and a fixed gap.</p>
+        <p class="muted">Fill scheduled times down the current rows from a start time and a fixed day gap.</p>
       </div>
       <div class="grid">
         <label>Start date/time
           <input type="datetime-local" id="scheduleStart">
         </label>
-        <label>Gap minutes
-          <input type="number" id="scheduleGapMinutes" min="0" step="1" value="60">
+        <label>Gap days
+          <input type="number" id="scheduleGapDays" min="0" step="1" value="1">
         </label>
       </div>
       <button type="button" class="secondary" id="fillScheduleTimes">Fill row schedule times</button>

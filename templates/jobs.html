@@ -8,15 +8,20 @@
       <h2>Upload jobs</h2>
       <p class="muted">Newest 200 jobs. Native-schedule platforms are uploaded early; app-scheduled platforms upload when due. Scheduled times are shown in {{ app_timezone }}.</p>
     </div>
-    <form method="post" action="{{ url_for('run_due') }}?key={{ config.ADMIN_RUN_KEY }}">
-      <button type="submit">Run ready jobs now</button>
-    </form>
+    <div class="connection-actions">
+      <form method="post" action="{{ url_for('run_due') }}?key={{ config.ADMIN_RUN_KEY }}">
+        <button type="submit">Run ready jobs now</button>
+      </form>
+      <button class="danger" type="submit" form="jobsBulkForm" onclick="return confirm('Delete the selected local job records? This does not cancel posts already scheduled remotely on a platform.');">Delete selected</button>
+    </div>
   </div>
 
+  <form id="jobsBulkForm" method="post" action="{{ url_for('delete_jobs') }}"></form>
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" aria-label="Select all jobs" onclick="document.querySelectorAll('input[name=job_ids]').forEach((box) => { box.checked = this.checked; });"></th>
           <th>ID</th>
           <th>Platform</th>
           <th>Destination</th>
@@ -32,6 +37,7 @@
       <tbody>
         {% for job in jobs %}
         <tr>
+          <td><input form="jobsBulkForm" type="checkbox" name="job_ids" value="{{ job.id }}" aria-label="Select job {{ job.id }}"></td>
           <td>#{{ job.id }}</td>
           <td>{{ job.platform }}</td>
           <td>
@@ -58,7 +64,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="10" class="muted">No jobs yet.</td>
+          <td colspan="11" class="muted">No jobs yet.</td>
         </tr>
         {% endfor %}
       </tbody>

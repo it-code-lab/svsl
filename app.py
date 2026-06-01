@@ -387,6 +387,29 @@ def create_app():
         flash(f"Job #{job.id} re-queued.", "success")
         return redirect(url_for("jobs"))
 
+    @app.route("/jobs/delete", methods=["POST"])
+    def delete_jobs():
+        selected_ids = []
+        for raw_id in request.form.getlist("job_ids"):
+            try:
+                selected_ids.append(int(raw_id))
+            except ValueError:
+                continue
+
+        if not selected_ids:
+            flash("Select at least one job to delete.", "error")
+            return redirect(url_for("jobs"))
+
+        deleted_count = (
+            ScheduledPost.query
+            .filter(ScheduledPost.id.in_(selected_ids))
+            .delete(synchronize_session=False)
+        )
+        db.session.commit()
+
+        flash(f"Deleted {deleted_count} selected job(s).", "success")
+        return redirect(url_for("jobs"))
+
     @app.template_filter("localtime")
     def localtime(value):
         if not value:
